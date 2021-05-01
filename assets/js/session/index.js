@@ -59,6 +59,14 @@ const Session = {
       handleCellIndicatorsClick(this, event);
     });
 
+    window.addEventListener(
+      "phx:page-loading-stop",
+      () => {
+        focusCellFromUrl(this);
+      },
+      { once: true }
+    );
+
     // DOM setup
 
     updateSectionListHighlight();
@@ -87,6 +95,10 @@ const Session = {
 
     this.handleEvent("section_deleted", ({ section_id: sectionId }) => {
       handleSectionDeleted(this, sectionId);
+    });
+
+    this.handleEvent("section_moved", ({ section_id: sectionId }) => {
+      handleSectionMoved(this, sectionId);
     });
 
     this.handleEvent("cell_upload", ({ cell_id: cellId, url }) => {
@@ -119,8 +131,17 @@ function handleDocumentKeyDown(hook, event) {
     keyBuffer.reset();
 
     if (key === "Escape") {
-      // Ignore Escape if it's supposed to close some Monaco input (like the find/replace box)
-      if (!event.target.closest(".monaco-inputbox")) {
+      const monacoInputOpen = !!event.target.closest(".monaco-inputbox");
+
+      const activeDescendant = event.target.getAttribute(
+        "aria-activedescendant"
+      );
+      const completionBoxOpen =
+        activeDescendant && activeDescendant.includes("suggest");
+
+      // Ignore Escape if it's supposed to close some Monaco input
+      // (like the find/replace box), or the completion box.
+      if (!monacoInputOpen && !completionBoxOpen) {
         escapeInsertMode(hook);
       }
     } else if (cmd && key === "Enter") {
@@ -128,6 +149,9 @@ function handleDocumentKeyDown(hook, event) {
       if (hook.state.focusedCellType === "elixir") {
         queueFocusedCellEvaluation(hook);
       }
+    } else if (cmd && key === "s") {
+      cancelEvent(event);
+      saveNotebook(hook);
     }
   } else {
     // Ignore inputs and notebook/section title fields
@@ -138,7 +162,10 @@ function handleDocumentKeyDown(hook, event) {
 
     keyBuffer.push(event.key);
 
-    if (keyBuffer.tryMatch(["d", "d"])) {
+    if (cmd && key === "s") {
+      cancelEvent(event);
+      saveNotebook(hook);
+    } else if (keyBuffer.tryMatch(["d", "d"])) {
       deleteFocusedCell(hook);
     } else if (
       hook.state.focusedCellType === "elixir" &&
@@ -153,8 +180,6 @@ function handleDocumentKeyDown(hook, event) {
       queueChildCellsEvaluation(hook);
     } else if (keyBuffer.tryMatch(["s", "s"])) {
       toggleSectionsPanel(hook);
-    } else if (keyBuffer.tryMatch(["s", "n"])) {
-      showNotebookSettings(hook);
     } else if (keyBuffer.tryMatch(["s", "r"])) {
       showNotebookRuntimeSettings(hook);
     } else if (keyBuffer.tryMatch(["e", "x"])) {
@@ -266,6 +291,20 @@ function handleCellIndicatorsClick(hook, event) {
 }
 
 /**
+ * Focuses cell based on the given URL.
+ */
+function focusCellFromUrl(hook) {
+  const hash = window.location.hash;
+
+  if (hash.startsWith("#cell-")) {
+    const cellId = hash.replace(/^#cell-/, "");
+    if (getCellById(cellId)) {
+      setFocusedCell(hook, cellId);
+    }
+  }
+}
+
+/**
  * Handles the main notebook area being scrolled.
  */
 function updateSectionListHighlight() {
@@ -301,12 +340,12 @@ function toggleSectionsPanel(hook) {
   hook.el.toggleAttribute("data-js-sections-panel-expanded");
 }
 
-function showNotebookSettings(hook) {
-  hook.pushEvent("show_notebook_settings", {});
+function showNotebookRuntimeSettings(hook) {
+  hook.pushEvent("show_runtime_settings", {});
 }
 
-function showNotebookRuntimeSettings(hook) {
-  hook.pushEvent("show_notebook_runtime_settings", {});
+function saveNotebook(hook) {
+  hook.pushEvent("save", {});
 }
 
 function deleteFocusedCell(hook) {
@@ -502,6 +541,11 @@ function handleSectionDeleted(hook, sectionId) {
   if (hook.state.focusedSectionId === sectionId) {
     setFocusedCell(hook, null);
   }
+}
+
+function handleSectionMoved(hook, sectionId) {
+  const section = getSectionById(sectionId);
+  smoothlyScrollToElement(section);
 }
 
 function handleCellUpload(hook, cellId, url) {

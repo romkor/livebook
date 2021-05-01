@@ -4,7 +4,9 @@ defmodule LivebookWeb.SessionLive.ShortcutsComponent do
   @shortcuts %{
     insert_mode: [
       %{seq: ["esc"], desc: "Switch back to navigation mode"},
-      %{seq: ["ctrl", "↵"], desc: "Evaluate cell and stay in insert mode"}
+      %{seq: ["ctrl", "↵"], desc: "Evaluate cell and stay in insert mode"},
+      %{seq: ["tab"], desc: "Autocomplete expression when applicable"},
+      %{seq: ["ctrl", "␣"], desc: "Show completion list, use twice for details"}
     ],
     navigation_mode: [
       %{seq: ["?"], desc: "Open this help modal"},
@@ -17,16 +19,18 @@ defmodule LivebookWeb.SessionLive.ShortcutsComponent do
       %{seq: ["m"], desc: "Insert Markdown cell below"},
       %{seq: ["N"], desc: "Insert Elixir cell above"},
       %{seq: ["M"], desc: "Insert Markdown cell above"},
-      %{seq: ["dd"], desc: "Delete cell"},
       %{seq: ["S"], desc: "Add section"},
+      %{seq: ["dd"], desc: "Delete cell"},
       %{seq: ["ee"], desc: "Evaluate cell"},
       %{seq: ["es"], desc: "Evaluate section"},
       %{seq: ["ea"], desc: "Evaluate all stale/new cells"},
       %{seq: ["ej"], desc: "Evaluate cells below"},
       %{seq: ["ex"], desc: "Cancel cell evaluation"},
       %{seq: ["ss"], desc: "Toggle sections panel"},
-      %{seq: ["sn"], desc: "Show notebook settings"},
-      %{seq: ["sr"], desc: "Show notebook runtime settings"}
+      %{seq: ["sr"], desc: "Show runtime settings"}
+    ],
+    universal: [
+      %{seq: ["ctrl", "s"], desc: "Save notebook"}
     ]
   }
 
@@ -38,7 +42,7 @@ defmodule LivebookWeb.SessionLive.ShortcutsComponent do
   @impl true
   def render(assigns) do
     ~L"""
-    <div class="p-6 sm:max-w-4xl sm:w-full flex flex-col space-y-3">
+    <div class="p-6 flex flex-col space-y-3">
       <h3 class="text-2xl font-semibold text-gray-800">
         Keyboard shortcuts
       </h3>
@@ -51,6 +55,7 @@ defmodule LivebookWeb.SessionLive.ShortcutsComponent do
       </p>
       <%= render_shortcuts_section("Navigation mode", @shortcuts.navigation_mode, @platform) %>
       <%= render_shortcuts_section("Insert mode", @shortcuts.insert_mode, @platform) %>
+      <%= render_shortcuts_section("Universal", @shortcuts.universal, @platform) %>
     </div>
     """
   end
@@ -63,11 +68,11 @@ defmodule LivebookWeb.SessionLive.ShortcutsComponent do
     <h3 class="text-lg font-medium text-gray-900 pt-4">
       <%= @title %>
     </h3>
-    <div class="mt-2 flex">
-      <div class="w-1/2">
+    <div class="mt-2 flex sm:flex-row flex-col">
+      <div class="flex-grow">
         <%= render_shortcuts_section_table(@left, @platform) %>
       </div>
-      <div class="w-1/2">
+      <div class="flex-grow">
         <%= render_shortcuts_section_table(@right, @platform) %>
       </div>
     </div>

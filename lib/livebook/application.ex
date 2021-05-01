@@ -7,6 +7,7 @@ defmodule Livebook.Application do
 
   def start(_type, _args) do
     ensure_distribution!()
+    set_cookie()
 
     children = [
       # Start the Telemetry supervisor
@@ -69,6 +70,11 @@ defmodule Livebook.Application do
     end
   end
 
+  defp set_cookie() do
+    cookie = Application.fetch_env!(:livebook, :cookie)
+    Node.set_cookie(cookie)
+  end
+
   defp get_node_type_and_name() do
     Application.get_env(:livebook, :node) || {:shortnames, random_short_name()}
   end
@@ -84,10 +90,10 @@ defmodule Livebook.Application do
   end
 
   defp access_url() do
-    token = Application.get_env(:livebook, :token)
     root_url = LivebookWeb.Endpoint.url()
 
-    if token do
+    if Livebook.Config.auth_mode() == :token do
+      token = Application.fetch_env!(:livebook, :token)
       root_url <> "/?token=" <> token
     else
       root_url

@@ -9,7 +9,7 @@ defmodule Livebook.Session do
   # them of any changes applied to the notebook.
   #
   # The core concept is the `Data` structure
-  # to which we can apply reproducible opreations.
+  # to which we can apply reproducible operations.
   # See `Data` for more information.
 
   use GenServer, restart: :temporary
@@ -49,7 +49,7 @@ defmodule Livebook.Session do
 
   * `:id` (**required**) - a unique identifier to register the session under
 
-  * `:notebook` - the inital `Notebook` structure (e.g. imported from a file)
+  * `:notebook` - the initial `Notebook` structure (e.g. imported from a file)
 
   * `:path` - the file to which the notebook should be saved
 
@@ -80,7 +80,7 @@ defmodule Livebook.Session do
 
   Returns the current session data, which the client can than
   keep in sync with the server by subscribing to the `sessions:id` topic
-  and reciving operations to apply.
+  and receiving operations to apply.
   """
   @spec register_client(id(), pid()) :: Data.t()
   def register_client(session_id, pid) do
@@ -142,6 +142,14 @@ defmodule Livebook.Session do
   @spec move_cell(id(), Cell.id(), integer()) :: :ok
   def move_cell(session_id, cell_id, offset) do
     GenServer.cast(name(session_id), {:move_cell, self(), cell_id, offset})
+  end
+
+  @doc """
+  Asynchronously sends section move request to the server.
+  """
+  @spec move_section(id(), Section.id(), integer()) :: :ok
+  def move_section(session_id, section_id, offset) do
+    GenServer.cast(name(session_id), {:move_section, self(), section_id, offset})
   end
 
   @doc """
@@ -357,6 +365,11 @@ defmodule Livebook.Session do
     {:noreply, handle_operation(state, operation)}
   end
 
+  def handle_cast({:move_section, client_pid, section_id, offset}, state) do
+    operation = {:move_section, client_pid, section_id, offset}
+    {:noreply, handle_operation(state, operation)}
+  end
+
   def handle_cast({:queue_cell_evaluation, client_pid, cell_id}, state) do
     case ensure_runtime(state) do
       {:ok, state} ->
@@ -559,7 +572,7 @@ defmodule Livebook.Session do
     end
   end
 
-  # Given any opeation on `Data`, the process does the following:
+  # Given any operation on `Data`, the process does the following:
   #
   #   * broadcasts the operation to all clients immediately,
   #     so that they can update their local `Data`
@@ -641,7 +654,7 @@ defmodule Livebook.Session do
     prev_ref =
       case Notebook.parent_cells_with_section(state.data.notebook, cell.id) do
         [{parent, _} | _] -> parent.id
-        [] -> :initial
+        [] -> nil
       end
 
     file = (state.data.path || "") <> "#cell"
@@ -653,7 +666,7 @@ defmodule Livebook.Session do
   end
 
   # Checks if a runtime already set, and if that's not the case
-  # starts a new standlone one.
+  # starts a new standalone one.
   defp ensure_runtime(%{data: %{runtime: nil}} = state) do
     with {:ok, runtime} <- Runtime.ElixirStandalone.init() do
       runtime_monitor_ref = Runtime.connect(runtime)

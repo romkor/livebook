@@ -28,13 +28,36 @@ defmodule Livebook.Config do
   """
   @spec root_path() :: binary()
   def root_path() do
-    Application.get_env(:livebook, :root_path, File.cwd!())
+    Application.fetch_env!(:livebook, :root_path)
   end
 
   ## Parsing
 
   @doc """
-  Parses a long secret.
+  Parses and validates the root path from env.
+  """
+  def root_path!(env) do
+    if root_path = System.get_env(env) do
+      root_path!("LIVEBOOK_ROOT_PATH", root_path)
+    else
+      File.cwd!()
+    end
+  end
+
+  @doc """
+  Validates `root_path` within context.
+  """
+  def root_path!(context, root_path) do
+    if File.dir?(root_path) do
+      root_path
+    else
+      IO.warn("ignoring #{context} because it doesn't point to a directory: #{root_path}")
+      File.cwd!()
+    end
+  end
+
+  @doc """
+  Parses and validates the secret from env.
   """
   def secret!(env) do
     if secret_key_base = System.get_env(env) do
@@ -50,7 +73,7 @@ defmodule Livebook.Config do
   end
 
   @doc """
-  Parses a port.
+  Parses and validates the port from env.
   """
   def port!(env) do
     if port = System.get_env(env) do
@@ -62,7 +85,38 @@ defmodule Livebook.Config do
   end
 
   @doc """
-  Parses a password.
+  Parses and validates the ip from env.
+  """
+  def ip!(env) do
+    if ip = System.get_env(env) do
+      ip!(env, ip)
+    end
+  end
+
+  @doc """
+  Parses and validates the ip within context.
+  """
+  def ip!(context, ip) do
+    case ip |> String.to_charlist() |> :inet.parse_address() do
+      {:ok, ip} ->
+        ip
+
+      {:error, :einval} ->
+        abort!("expected #{context} to be a valid ipv4 or ipv6 address, got: #{ip}")
+    end
+  end
+
+  @doc """
+  Parses the cookie from env.
+  """
+  def cookie!(env) do
+    if cookie = System.get_env(env) do
+      String.to_atom(cookie)
+    end
+  end
+
+  @doc """
+  Parses and validates the password from env.
   """
   def password!(env) do
     if password = System.get_env(env) do

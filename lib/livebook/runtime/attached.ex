@@ -6,26 +6,30 @@ defmodule Livebook.Runtime.Attached do
   # Such node must be already started and available,
   # Livebook doesn't manage its lifetime in any way
   # and only loads/unloads the necessary elements.
-  # The node can be an oridinary Elixir runtime,
+  # The node can be an ordinary Elixir runtime,
   # a Mix project shell, a running release or anything else.
 
-  defstruct [:node]
+  defstruct [:node, :cookie]
 
   @type t :: %__MODULE__{
-          node: node()
+          node: node(),
+          cookie: atom()
         }
 
   @doc """
   Checks if the given node is available for use and initializes
   it with Livebook-specific modules and processes.
   """
-  @spec init(node()) :: {:ok, t()} | {:error, :unreachable | :already_in_use}
-  def init(node) do
+  @spec init(node(), atom()) :: {:ok, t()} | {:error, :unreachable | :already_in_use}
+  def init(node, cookie \\ Node.get_cookie()) do
+    # Set cookie for connecting to this specific node
+    Node.set_cookie(node, cookie)
+
     case Node.ping(node) do
       :pong ->
         case Livebook.Runtime.ErlDist.initialize(node) do
           :ok ->
-            {:ok, %__MODULE__{node: node}}
+            {:ok, %__MODULE__{node: node, cookie: cookie}}
 
           {:error, :already_in_use} ->
             {:error, :already_in_use}
@@ -54,7 +58,7 @@ defimpl Livebook.Runtime, for: Livebook.Runtime.Attached do
         code,
         container_ref,
         evaluation_ref,
-        prev_evaluation_ref \\ :initial,
+        prev_evaluation_ref,
         opts \\ []
       ) do
     ErlDist.Manager.evaluate_code(
@@ -73,5 +77,16 @@ defimpl Livebook.Runtime, for: Livebook.Runtime.Attached do
 
   def drop_container(runtime, container_ref) do
     ErlDist.Manager.drop_container(runtime.node, container_ref)
+  end
+
+  def request_completion_items(runtime, send_to, ref, hint, container_ref, evaluation_ref) do
+    ErlDist.Manager.request_completion_items(
+      runtime.node,
+      send_to,
+      ref,
+      hint,
+      container_ref,
+      evaluation_ref
+    )
   end
 end

@@ -11,14 +11,15 @@ defmodule Livebook.MixProject do
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
       deps: deps(),
-      escript: escript()
+      escript: escript(),
+      releases: releases()
     ]
   end
 
   def application do
     [
       mod: {Livebook.Application, []},
-      extra_applications: [:logger, :runtime_tools, :os_mon]
+      extra_applications: [:logger, :runtime_tools, :os_mon, :inets, :ssl]
     ]
   end
 
@@ -28,9 +29,7 @@ defmodule Livebook.MixProject do
   defp deps do
     [
       {:phoenix, "~> 1.5.7"},
-      # TODO: remove reference to the Git repo once LV 0.15.5 is released
-      {:phoenix_live_view, "~> 0.15.0",
-       github: "phoenixframework/phoenix_live_view", branch: "master", override: true},
+      {:phoenix_live_view, "~> 0.15.0"},
       {:phoenix_live_dashboard, "~> 0.4"},
       {:floki, ">= 0.27.0", only: :test},
       {:phoenix_html, "~> 2.11"},
@@ -39,7 +38,9 @@ defmodule Livebook.MixProject do
       {:telemetry_poller, "~> 0.4"},
       {:jason, "~> 1.0"},
       {:plug_cowboy, "~> 2.0"},
-      {:earmark_parser, "~> 1.4"}
+      {:earmark_parser, "~> 1.4"},
+      {:bypass, "~> 2.1", only: :test},
+      {:castore, "~> 0.1.0"}
     ]
   end
 
@@ -55,6 +56,15 @@ defmodule Livebook.MixProject do
     [
       main_module: LivebookCLI,
       app: nil
+    ]
+  end
+
+  defp releases() do
+    [
+      livebook: [
+        include_executables_for: [:unix],
+        include_erts: false
+      ]
     ]
   end
 end

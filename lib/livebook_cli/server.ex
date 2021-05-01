@@ -2,6 +2,7 @@ defmodule LivebookCLI.Server do
   @moduledoc false
 
   @behaviour LivebookCLI.Task
+
   @external_resource "README.md"
 
   [_, environment_variables, _] =
@@ -9,7 +10,6 @@ defmodule LivebookCLI.Server do
     |> File.read!()
     |> String.split("<!-- Environment variables -->")
 
-  @external_resource "README.md"
   @environment_variables String.trim(environment_variables)
 
   @impl true
@@ -19,11 +19,15 @@ defmodule LivebookCLI.Server do
 
     Available options:
 
+      --cookie      Sets a cookie for the app distributed node
+      --ip          The ip address to start the web application on, defaults to 127.0.0.1
+                    Must be a valid IPv4 or IPv6 address
       --name        Set a name for the app distributed node
       --no-token    Disable token authentication, enabled by default
                     If LIVEBOOK_PASSWORD is set, it takes precedence over token auth
-      --sname       Set a short name for the app distributed node
       -p, --port    The port to start the web application on, defaults to 8080
+      --root-path   The root path to use for file selection
+      --sname       Set a short name for the app distributed node
 
     The --help option can be given to print this notice.
 
@@ -61,22 +65,30 @@ defmodule LivebookCLI.Server do
   end
 
   defp start_server() do
-    Application.put_env(:phoenix, :serve_endpoints, true, persistent: true)
-
+    # We configure the endpoint with `server: true`,
+    # so it's gonna start listening
     case Application.ensure_all_started(:livebook) do
       {:ok, _} -> :ok
       {:error, _} -> :error
     end
   end
 
-  defp args_to_config(args) do
-    {opts, _} =
-      OptionParser.parse!(
-        args,
-        strict: [token: :boolean, port: :integer, name: :string, sname: :string],
-        aliases: [p: :port]
-      )
+  @switches [
+    cookie: :string,
+    ip: :string,
+    name: :string,
+    port: :integer,
+    root_path: :string,
+    sname: :string,
+    token: :boolean
+  ]
 
+  @aliases [
+    p: :port
+  ]
+
+  defp args_to_config(args) do
+    {opts, _} = OptionParser.parse!(args, strict: @switches, aliases: @aliases)
     validate_options!(opts)
     opts_to_config(opts, [])
   end
@@ -101,6 +113,16 @@ defmodule LivebookCLI.Server do
     opts_to_config(opts, [{:livebook, LivebookWeb.Endpoint, http: [port: port]} | config])
   end
 
+  defp opts_to_config([{:ip, ip} | opts], config) do
+    ip = Livebook.Config.ip!("--ip", ip)
+    opts_to_config(opts, [{:livebook, LivebookWeb.Endpoint, http: [ip: ip]} | config])
+  end
+
+  defp opts_to_config([{:root_path, root_path} | opts], config) do
+    root_path = Livebook.Config.root_path!("--root-path", root_path)
+    opts_to_config(opts, [{:livebook, :root_path, root_path} | config])
+  end
+
   defp opts_to_config([{:sname, sname} | opts], config) do
     sname = String.to_atom(sname)
     opts_to_config(opts, [{:livebook, :node, {:shortnames, sname}} | config])
@@ -109,6 +131,11 @@ defmodule LivebookCLI.Server do
   defp opts_to_config([{:name, name} | opts], config) do
     name = String.to_atom(name)
     opts_to_config(opts, [{:livebook, :node, {:longnames, name}} | config])
+  end
+
+  defp opts_to_config([{:cookie, cookie} | opts], config) do
+    cookie = String.to_atom(cookie)
+    opts_to_config(opts, [{:livebook, :cookie, cookie} | config])
   end
 
   defp opts_to_config([_opt | opts], config), do: opts_to_config(opts, config)

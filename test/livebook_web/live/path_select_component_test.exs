@@ -1,5 +1,6 @@
 defmodule LivebookWeb.PathSelectComponentTest do
-  use LivebookWeb.ConnCase
+  # Note: we cannot run asynchronously, because we use `File.cd!`
+  use LivebookWeb.ConnCase, async: false
 
   import Phoenix.LiveViewTest
 
@@ -22,9 +23,10 @@ defmodule LivebookWeb.PathSelectComponentTest do
   end
 
   test "relative paths are expanded from the current working directory" do
-    File.cd!(notebooks_path())
-    path = ""
-    assert render_component(PathSelectComponent, attrs(path: path)) =~ "basic.livemd"
+    File.cd!(notebooks_path(), fn ->
+      path = ""
+      assert render_component(PathSelectComponent, attrs(path: path)) =~ "basic.livemd"
+    end)
   end
 
   defp attrs(attrs) do

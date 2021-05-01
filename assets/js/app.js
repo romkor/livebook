@@ -9,7 +9,7 @@ import "@fontsource/jetbrains-mono";
 
 import "phoenix_html";
 import { Socket } from "phoenix";
-import NProgress from "nprogress";
+import topbar from "topbar";
 import { LiveSocket } from "phoenix_live_view";
 import ContentEditable from "./content_editable";
 import Cell from "./cell";
@@ -17,6 +17,7 @@ import Session from "./session";
 import FocusOnUpdate from "./focus_on_update";
 import ScrollOnUpdate from "./scroll_on_update";
 import VirtualizedLines from "./virtualized_lines";
+import Menu from "./menu";
 import morphdomCallbacks from "./morphdom_callbacks";
 
 const hooks = {
@@ -26,6 +27,7 @@ const hooks = {
   FocusOnUpdate,
   ScrollOnUpdate,
   VirtualizedLines,
+  Menu,
 };
 
 const csrfToken = document
@@ -39,8 +41,12 @@ const liveSocket = new LiveSocket("/live", Socket, {
 });
 
 // Show progress bar on live navigation and form submits
-window.addEventListener("phx:page-loading-start", (info) => NProgress.start());
-window.addEventListener("phx:page-loading-stop", (info) => NProgress.done());
+topbar.config({
+  barColors: { 0: "#b2c1ff" },
+  shadowColor: "rgba(0, 0, 0, .3)",
+});
+window.addEventListener("phx:page-loading-start", () => topbar.show());
+window.addEventListener("phx:page-loading-stop", () => topbar.hide());
 
 // connect if there are any LiveViews on the page
 liveSocket.connect();

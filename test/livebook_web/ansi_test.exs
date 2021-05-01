@@ -18,6 +18,11 @@ defmodule LivebookWeb.ANSITest do
                ANSI.ansi_string_to_html("\e[4mcat\e[0m") |> Phoenix.HTML.safe_to_string()
     end
 
+    test "supports short reset sequence" do
+      assert ~s{<span style="color: var(--ansi-color-blue);">cat</span>} ==
+               ANSI.ansi_string_to_html("\e[34mcat\e[m") |> Phoenix.HTML.safe_to_string()
+    end
+
     test "supports multiple escape codes at the same time" do
       assert ~s{<span style="background-color: var(--ansi-color-red);color: var(--ansi-color-blue);">cat</span>} ==
                ANSI.ansi_string_to_html("\e[34m\e[41mcat\e[0m") |> Phoenix.HTML.safe_to_string()
@@ -88,6 +93,10 @@ defmodule LivebookWeb.ANSITest do
       assert ~s{<div>cat</div>} ==
                ANSI.ansi_string_to_html("cat", renderer: div_renderer)
                |> Phoenix.HTML.safe_to_string()
+    end
+
+    test "ignores RFC 1468 switch to ASCII" do
+      assert ~s{cat} == ANSI.ansi_string_to_html("\e(Bcat") |> Phoenix.HTML.safe_to_string()
     end
   end
 end

@@ -1,6 +1,7 @@
 defmodule LivebookWeb.Helpers do
   import Phoenix.LiveView.Helpers
   import Phoenix.HTML.Tag
+  alias LivebookWeb.Router.Helpers, as: Routes
 
   @doc """
   Renders a component inside the `Livebook.ModalComponent` component.
@@ -10,7 +11,16 @@ defmodule LivebookWeb.Helpers do
   """
   def live_modal(socket, component, opts) do
     path = Keyword.fetch!(opts, :return_to)
-    modal_opts = [id: :modal, return_to: path, component: component, opts: opts]
+    modal_class = Keyword.get(opts, :modal_class)
+
+    modal_opts = [
+      id: :modal,
+      return_to: path,
+      modal_class: modal_class,
+      component: component,
+      opts: opts
+    ]
+
     live_component(socket, LivebookWeb.ModalComponent, modal_opts)
   end
 
@@ -67,5 +77,13 @@ defmodule LivebookWeb.Helpers do
     |> Phoenix.HTML.safe_to_string()
     |> String.split("\n")
     |> Enum.map(&Phoenix.HTML.raw/1)
+  end
+
+  @doc """
+  Returns path to specific process dialog within LiveDashboard.
+  """
+  def live_dashboard_process_path(socket, pid) do
+    pid_str = Phoenix.LiveDashboard.Helpers.encode_pid(pid)
+    Routes.live_dashboard_path(socket, :page, node(), "processes", info: pid_str)
   end
 end

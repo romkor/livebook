@@ -66,7 +66,7 @@ defmodule Livebook.Notebook.Welcome do
 
   By default notebooks are kept in memory, which is fine for interactive hacking,
   but oftentimes you will want to save your work for later. Fortunately, notebooks
-  can be persisted by clicking on the "Settings" icon in the sidebar
+  can be persisted by clicking on the "Disk" icon in the bottom-right corner
   and selecting the file location.
 
   Notebooks are stored in **live markdown** format, which is essentially the markdown you know,
@@ -127,7 +127,7 @@ defmodule Livebook.Notebook.Welcome do
   By default, a new Elixir node is started (similarly to starting `iex`),
   but you can also choose to run inside a Mix project (as you would with `iex -S mix`)
   or even manually attach to an existing distributed node!
-  You can configure the runtime by clicking the "Settings" icon on the sidebar.
+  You can configure the runtime by clicking the "Runtime" icon on the sidebar.
 
   ## Using packages
 
@@ -163,6 +163,26 @@ defmodule Livebook.Notebook.Welcome do
   Also keep in mind that `Mix.install/2` can be called only once
   per runtime, so if you need to modify the dependencies, you should
   go to the notebook runtime configuration and **reconnect** the current runtime.
+
+  ## Running tests
+
+  If you are using Elixir v1.12, it is also possible to run tests directly
+  from your notebooks. The key is to disable `ExUnit`'s autorun feature and
+  then explicitly run the test suite after all test cases have been defined:
+
+  ```elixir
+  ExUnit.start(autorun: false)
+
+  defmodule MyTest do
+    use ExUnit.Case, async: true
+    
+    test "it works" do
+      assert true
+    end
+  end
+
+  ExUnit.run()
+  ```
 
   ## Math
 
